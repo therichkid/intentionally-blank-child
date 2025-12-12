@@ -37,9 +37,10 @@ class Events_REST_Controller extends WP_REST_Posts_Controller
 
   public function modify_query($args, $request)
   {
-    $args["meta_key"] = "event_datum";
-    $args["orderby"] = "meta_value_num";
-    $args["order"] = "ASC";
+    $args["orderby"] = [
+      "event_datum" => "ASC",
+      "zeit_von" => "ASC",
+    ];
 
     $from = str_replace("-", "", $request->get_param("from"));
     $to = str_replace("-", "", $request->get_param("to"));
