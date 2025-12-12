@@ -4,6 +4,7 @@
  *
  * This file provides:
  * - REST API endpoint for fetching events within a date range
+ * - Inclusion of ACF fields in the REST API response for "events" post type
  * - Custom admin columns for the "events" post type
  * - Output of custom column values
  * - Sortable columns and custom ordering by meta value
