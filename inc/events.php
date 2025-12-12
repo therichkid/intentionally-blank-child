@@ -148,17 +148,11 @@ add_filter("request", "sort_custom_column_entries_by_value");
 
 function set_default_admin_sort($query)
 {
-  if (
-    !is_admin() ||
-    !$query->is_main_query() ||
-    !function_exists("get_current_screen")
-  ) {
+  if (!is_admin()) {
     return;
   }
 
-  $screen = get_current_screen();
-
-  if ($screen && "events" === $screen->post_type && !isset($_GET["orderby"])) {
+  if ($query->get("post_type") === "events") {
     $query->set("meta_key", "event_datum");
     $query->set("orderby", "meta_value");
     $query->set("order", "DESC");

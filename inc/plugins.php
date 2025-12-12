@@ -32,22 +32,12 @@ add_filter("site_transient_update_plugins", "cf7_disable_updates");
 
 function cf7_set_default_admin_sort($query)
 {
-  if (
-    !is_admin() ||
-    !$query->is_main_query() ||
-    !function_exists("get_current_screen")
-  ) {
+  if (!is_admin()) {
     return;
   }
 
-  $screen = get_current_screen();
-
-  if (
-    $screen &&
-    "wpcf7_contact_form" === $screen->post_type &&
-    !isset($_GET["orderby"])
-  ) {
-    $query->set("orderby", "post_date");
+  if ($query->get("post_type") === "wpcf7_contact_form") {
+    $query->set("orderby", "date");
     $query->set("order", "DESC");
   }
 }
