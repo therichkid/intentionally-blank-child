@@ -6,7 +6,7 @@
  * @subpackage intentionally-blank
  */
 
-$blank_show_footer = get_theme_mod("blank_show_copyright", true);
+$blank_show_footer = get_theme_mod("blank_show_copyright", false);
 $blank_show_header = get_theme_mod("header_text", false);
 $blank_description = get_bloginfo("description", "display");
 ?><!DOCTYPE html>
