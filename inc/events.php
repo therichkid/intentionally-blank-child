@@ -3,11 +3,12 @@
  * Event Logic
  *
  * This file provides:
- * - REST API endpoint for fetching events within a date range
- * - Inclusion of ACF fields in the REST API response for "events" post type
- * - Custom admin columns for the "events" post type
- * - Output of custom column values
- * - Sortable columns and custom ordering by meta value
+ *   - REST API endpoint for fetching events within a date range
+ *   - Inclusion of ACF fields in the REST API response for "events" post type
+ *   - Custom admin columns for the "events" post type
+ *   - Output of custom column values
+ *   - Sortable columns and custom ordering by meta value
+ *   - Default admin sort order for events by event date
  *
  * For more information, see: https://pluginrepublic.com/add-acf-fields-to-admin-columns/
  */
@@ -144,4 +145,20 @@ function sort_custom_column_entries_by_value($vars)
   return $vars;
 }
 add_filter("request", "sort_custom_column_entries_by_value");
+
+function set_default_admin_sort($query)
+{
+  if (!is_admin() || !$query->is_main_query()) {
+    return;
+  }
+
+  $screen = get_current_screen();
+
+  if ($screen && "events" === $screen->post_type && !isset($_GET["orderby"])) {
+    $query->set("meta_key", "event_datum");
+    $query->set("orderby", "meta_value");
+    $query->set("order", "DESC");
+  }
+}
+add_action("pre_get_posts", "set_default_admin_sort");
 ?>

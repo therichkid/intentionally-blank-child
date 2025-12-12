@@ -3,7 +3,7 @@
  * Environment Variables Logic
  *
  * This file provides:
- * - Loading environment variables from a .env file into the $_ENV superglobal and system environment.
+ *   - Loading environment variables from a .env file into the $_ENV superglobal and system environment.
  */
 
 function load_env($path)
