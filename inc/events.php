@@ -11,7 +11,7 @@
  * For more information, see: https://pluginrepublic.com/add-acf-fields-to-admin-columns/
  */
 
-class Events_REST_Controller extends WP_REST_Posts_Controller
+class Custom_REST_Events_Controller extends WP_REST_Posts_Controller
 {
   public function __construct()
   {
@@ -72,9 +72,26 @@ class Events_REST_Controller extends WP_REST_Posts_Controller
   }
 }
 add_action("rest_api_init", function () {
-  $controller = new Events_REST_Controller();
+  $controller = new Custom_REST_Events_Controller();
   $controller->register_routes();
 });
+
+function add_acf_fields_to_events_rest_response($response, $post, $request)
+{
+  if (function_exists("get_fields")) {
+    $acf = get_fields($post->ID);
+    if ($acf) {
+      $response->data["acf"] = $acf;
+    }
+  }
+  return $response;
+}
+add_filter(
+  "rest_prepare_events",
+  "add_acf_fields_to_events_rest_response",
+  10,
+  3,
+);
 
 function add_custom_columns($columns)
 {
