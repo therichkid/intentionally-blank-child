@@ -1,0 +1,30 @@
+name: FTP Deploy
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    types:
+      - closed
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Deploy via FTP
+        uses: SamKirkland/FTP-Deploy-Action@4
+        with:
+          server: ${{ secrets.FTP_SERVER }}
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          server-dir: /admin.bayciv/wp-content/themes/intentionally-blank-child/
+          exclude: |
+            .env
+            .github/**
+            .git/**
+            .gitignore

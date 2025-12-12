@@ -29,6 +29,17 @@ function send_email_on_publish_post($post_id, $post, $old_status)
     return;
   }
 
+  $recipients = array_filter(
+    array_map(
+      "trim",
+      explode(",", $_ENV["WP_EMAIL_NOTIFICATIONS_RECIPIENTS"] ?? ""),
+    ),
+  );
+
+  if (empty($recipients)) {
+    return;
+  }
+
   $author_id = $post->post_author;
   $author_name = get_the_author_meta("display_name", $author_id);
   $author_email = get_the_author_meta("user_email", $author_id);
@@ -36,12 +47,6 @@ function send_email_on_publish_post($post_id, $post, $old_status)
   $post_content = $post->post_content;
   $post_slug = $post->post_name;
 
-  $recipients = array_filter(
-    array_map(
-      "trim",
-      explode(",", $_ENV["WP_EMAIL_NOTIFICATIONS_RECIPIENTS"] ?? ""),
-    ),
-  );
   $subject = sprintf("Neuer Betrag auf BayCIV veröffentlicht: %s", $post_title);
   $message = "Ein neuer Beitrag wurde von $author_name ($author_email) auf BayCIV veröffentlicht: $post_title
 
