@@ -3,12 +3,77 @@
  * Event Logic
  *
  * This file provides:
+ * - REST API endpoint for fetching events within a date range
  * - Custom admin columns for the "events" post type
  * - Output of custom column values
  * - Sortable columns and custom ordering by meta value
  *
  * For more information, see: https://pluginrepublic.com/add-acf-fields-to-admin-columns/
  */
+
+class Events_REST_Controller extends WP_REST_Posts_Controller
+{
+  public function __construct()
+  {
+    parent::__construct("events");
+  }
+
+  public function register_routes()
+  {
+    register_rest_route("custom/v1", "/events", [
+      "methods" => "GET",
+      "callback" => [$this, "get_items"],
+      "permission_callback" => "__return_true",
+    ]);
+  }
+
+  public function get_items($request)
+  {
+    add_filter("rest_events_query", [$this, "modify_query"], 10, 2);
+    $response = parent::get_items($request);
+    remove_filter("rest_events_query", [$this, "modify_query"]);
+    return $response;
+  }
+
+  public function modify_query($args, $request)
+  {
+    $args["meta_key"] = "event_datum";
+    $args["orderby"] = "meta_value_num";
+    $args["order"] = "ASC";
+
+    $from = str_replace("-", "", $request->get_param("from"));
+    $to = str_replace("-", "", $request->get_param("to"));
+    $meta = $args["meta_query"] ?? [];
+
+    if ($from) {
+      $meta[] = [
+        "key" => "event_datum",
+        "value" => $from,
+        "compare" => ">=",
+        "type" => "NUMERIC",
+      ];
+    }
+    if ($to) {
+      $meta[] = [
+        "key" => "event_datum",
+        "value" => $to,
+        "compare" => "<=",
+        "type" => "NUMERIC",
+      ];
+    }
+
+    if ($from || $to) {
+      $meta["relation"] = "AND";
+      $args["meta_query"] = $meta;
+    }
+
+    return $args;
+  }
+}
+add_action("rest_api_init", function () {
+  $controller = new Events_REST_Controller();
+  $controller->register_routes();
+});
 
 function add_custom_columns($columns)
 {
