@@ -67,17 +67,36 @@ class Crypt
 
 function encrypt_email_in_rest_response($response, $post, $request)
 {
-  $email = get_post_meta($post->ID, "email", true);
-  if (
-    !empty($email) &&
-    (str_contains($email, "@") ||
-      str_contains($email, "(at)") ||
-      str_contains($email, "[at]"))
-  ) {
-    $response->data["email"] = Crypt::encrypt($email);
+  $encrypt_emails = function ($data) use (&$encrypt_emails) {
+    if (is_array($data)) {
+      foreach ($data as $key => $value) {
+        if ($key === "email" && !empty($value)) {
+          $data[$key] = Crypt::encrypt($value);
+        } elseif (is_array($value) || is_object($value)) {
+          $data[$key] = $encrypt_emails($value);
+        }
+      }
+    } elseif (is_object($data)) {
+      foreach ($data as $key => $value) {
+        if ($key === "email" && !empty($value)) {
+          $data->$key = Crypt::encrypt($value);
+        } elseif (is_array($value) || is_object($value)) {
+          $data->$key = $encrypt_emails($value);
+        }
+      }
+    }
+    return $data;
+  };
+
+  if (method_exists($response, "get_data")) {
+    $data = $response->get_data();
+    $data = $encrypt_emails($data);
+    $response->set_data($data);
   }
+
   return $response;
 }
+
 add_action("init", function () {
   $post_types = get_post_types(["public" => true], "names");
   foreach ($post_types as $type) {
