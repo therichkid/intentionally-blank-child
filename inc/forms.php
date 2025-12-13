@@ -93,16 +93,17 @@ function parse_tag_options($tag, $type)
     in_array($type, [
       "text",
       "number",
-      "email",
-      "url",
-      "tel",
       "textarea",
       "date",
+      "email",
+      "tel",
+      "url",
+      "file",
     ])
   ) {
     foreach ($options as $option) {
-      if (preg_match('/^"(.*)"$/', $option, $m)) {
-        $field["default"] = $m[1];
+      if (preg_match('/"([^"]*)"/', $option, $m)) {
+        $field["default_value"] = $m[1];
       }
       if (strpos($option, "min:") === 0) {
         $field["min"] = substr($option, 4);
@@ -113,7 +114,7 @@ function parse_tag_options($tag, $type)
     }
   }
 
-  if (in_array($type, ["select", "checkbox", "radio"])) {
+  if (in_array($type, ["select", "checkbox", "radio", "acceptance", "quiz"])) {
     $field["options"] = $tag->values;
     if ($type === "select" && in_array("include_blank", $options)) {
       array_unshift($field["options"], null);
@@ -123,7 +124,7 @@ function parse_tag_options($tag, $type)
       if (preg_match('/^default:(\d+)$/', $option, $m)) {
         $idx = (int) $m[1] - 1;
         if (isset($field["options"][$idx])) {
-          $field["default"] = $field["options"][$idx];
+          $field["default_value"] = $field["options"][$idx];
         }
       }
     }
