@@ -4,6 +4,7 @@ load_env(__DIR__ . "/.env");
 
 require_once __DIR__ . "/inc/email-encryption.php";
 require_once __DIR__ . "/inc/events.php";
+require_once __DIR__ . "/inc/forms.php";
 require_once __DIR__ . "/inc/media.php";
 require_once __DIR__ . "/inc/plugins.php";
 require_once __DIR__ . "/inc/posts.php";
