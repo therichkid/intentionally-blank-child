@@ -60,8 +60,7 @@ function parse_form_elements($form_id)
           "type" => "field",
           "tag_type" => $type,
           "name" => $tag->name,
-          "label" =>
-            $label ?: ucwords(str_replace(["-", "_"], " ", $tag->name)),
+          "label" => $label,
           "required" => $tag->is_required(),
           "markup_source" => $part,
         ];
