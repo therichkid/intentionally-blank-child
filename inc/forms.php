@@ -66,7 +66,7 @@ function parse_form_elements($form_id)
           "markup_source" => $part,
         ];
 
-        $field = array_merge($field, parse_tag_options($tag, $type));
+        $field = array_merge($field, parse_tag_options($tag, $type, $part));
         $elements[] = $field;
       }
     } else {
@@ -84,7 +84,7 @@ function parse_form_elements($form_id)
   return $elements;
 }
 
-function parse_tag_options($tag, $type)
+function parse_tag_options($tag, $type, $markup_source)
 {
   $field = [];
   $options = $tag->options;
@@ -102,15 +102,16 @@ function parse_tag_options($tag, $type)
     ])
   ) {
     foreach ($options as $option) {
-      if (preg_match('/"([^"]*)"/', $option, $m)) {
-        $field["default_value"] = $m[1];
-      }
       if (strpos($option, "min:") === 0) {
         $field["min"] = substr($option, 4);
       }
       if (strpos($option, "max:") === 0) {
         $field["max"] = substr($option, 4);
       }
+    }
+
+    if ($markup_source && preg_match('/"([^"]*)"/', $markup_source, $m)) {
+      $field["default_value"] = $m[1];
     }
   }
 
