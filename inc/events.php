@@ -146,17 +146,26 @@ function sort_custom_column_entries_by_value($vars)
 }
 add_filter("request", "sort_custom_column_entries_by_value");
 
-function set_default_admin_sort($query)
+function set_default_admin_sort()
 {
-  if (!is_admin()) {
-    return;
-  }
-
-  if ($query->get("post_type") === "events") {
-    $query->set("meta_key", "event_datum");
-    $query->set("orderby", "meta_value");
-    $query->set("order", "DESC");
+  if (
+    is_admin() &&
+    isset($_GET["post_type"]) &&
+    $_GET["post_type"] === "events" &&
+    !isset($_GET["orderby"]) &&
+    !isset($_GET["order"])
+  ) {
+    $url = add_query_arg(
+      [
+        "post_type" => "events", // preserve post_type in redirect
+        "orderby" => "event_datum",
+        "order" => "desc",
+      ],
+      admin_url("edit.php"),
+    );
+    wp_redirect($url);
+    exit();
   }
 }
-add_action("pre_get_posts", "set_default_admin_sort");
+add_action("admin_init", "set_default_admin_sort");
 ?>

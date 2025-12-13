@@ -7,7 +7,7 @@
  *   - Disable plugin and theme auto-update email notifications.
  *   - Disable Contact Form 7 spam filter to allow POST requests.
  *   - Disable update notifications for Contact Form 7 plugin.
- *   - Set default admin sort order for Contact Form 7 and CFDB7 entries.
+ *   - Set default admin sort order for Contact Form 7 entries.
  */
 
 function acf_add_google_map_api($api)
@@ -30,34 +30,23 @@ function cf7_disable_updates($value)
 }
 add_filter("site_transient_update_plugins", "cf7_disable_updates");
 
-function cf7_set_default_admin_sort($query)
-{
-  if (!is_admin()) {
-    return;
-  }
-
-  if ($query->get("post_type") === "wpcf7_contact_form") {
-    $query->set("orderby", "date");
-    $query->set("order", "DESC");
-  }
-}
-add_action("pre_get_posts", "cf7_set_default_admin_sort");
-
-function cfdb7_set_default_admin_sort()
+function cf7_set_default_admin_sort()
 {
   if (
     isset($_GET["page"]) &&
-    $_GET["page"] === "cfdb7-list" &&
+    $_GET["page"] === "wpcf7" &&
+    !isset($_GET["post"]) &&
+    !isset($_GET["action"]) &&
     !isset($_GET["orderby"]) &&
     !isset($_GET["order"])
   ) {
     $url = add_query_arg([
-      "orderby" => "submit_time",
+      "orderby" => "date",
       "order" => "desc",
     ]);
     wp_redirect($url);
     exit();
   }
 }
-add_action("cfdb7_before_admin_page", "cfdb7_set_default_admin_sort");
+add_action("admin_init", "cf7_set_default_admin_sort");
 ?>
