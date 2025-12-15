@@ -13,14 +13,14 @@
 class FormElementParser
 {
   private WPCF7_ContactForm $form;
-  private array $tag_Map;
+  private array $tag_map;
 
   function __construct(WPCF7_ContactForm $form)
   {
     $this->form = $form;
     $tags = $form->scan_form_tags();
     foreach ($tags as $tag) {
-      $this->tagMap[$tag . name] = $tag;
+      $this->tag_map[$tag . name] = $tag;
     }
   }
 
@@ -28,8 +28,13 @@ class FormElementParser
   {
     $markup = $this->form->prop("form");
     $raw_form_parts = $this->split_form_parts($markup);
+    $parsed_elements = [];
 
-    return $this->split_form_parts($markup);
+    foreach ($raw_form_parts as $part) {
+      $parsed_elements[] = $this->parse_form_part($part);
+    }
+
+    return $parsed_elements;
   }
 
   private function split_form_parts(string $input): array
@@ -65,6 +70,50 @@ class FormElementParser
       $result[] = substr($input, $offset);
     }
     return array_values(array_filter($result, fn($v) => $v !== ""));
+  }
+
+  private function parse_form_part(string $part): array
+  {
+    $element = [];
+    $name = $this->get_name_from_form_part($part);
+
+    if (!$name || !isset($this->tag_map[$name])) {
+      return [
+        "type" => "text_block",
+        "content" => trim($part),
+      ];
+    }
+
+    $tag = $this->tag_map[$name])
+    $element = [
+        "type" => $tag->basetype,
+        "name" => $tag->name,
+        "required" =>  str_ends_with($tag->type, '*') || ($tag->basetype === 'acceptance' && !in_array('optional', $tag->options)),
+        "label" => $this->extract_label($part),
+    ]
+
+    return $element;
+  }
+
+  private function get_name_from_form_part(string $part): ?string
+  {
+    if (preg_match("/\[(\w+)[^\]]*\]/", $part, $matches)) {
+      return $matches[1];
+    }
+    return null;
+  }
+
+  private function extract_label(string $part): ?string
+  {
+    if (preg_match("/<label[^>]*>(.*?)<\/label>/is", $part, $matches)) {
+      $label = preg_replace("/\[[^\]]*\]/", "", $matches[1]);
+      return trim($label);
+      return trim(strip_tags($label));
+    }
+    if (preg_match('/\[([a-zA-Z0-9_]+)[^\]]*\](.*?)\[\/\1\]/is', $part, $matches)) {
+      return trim(strip_tags($matches[2]));
+    }
+    return null;
   }
 }
 
