@@ -80,11 +80,12 @@ class FormElementParser
     if (!$name || !isset($this->tag_map[$name])) {
       return [
         "type" => "text_block",
-        "content" => trim($part),
+        "raw_content" => trim($part),
       ];
     }
 
     $tag = $this->tag_map[$name];
+
     $element = [
       "type" => $tag->basetype,
       "name" => $tag->name,
@@ -92,7 +93,20 @@ class FormElementParser
         str_ends_with($tag->type, "*") ||
         ($tag->basetype === "acceptance" &&
           !in_array("optional", $tag->options)),
-      "label" => $this->extract_label($part),
+      "label" => $this->parse_label($part),
+      "options" => array_map(
+        fn($value, $idx) => [
+          "label" => $tag->labels[$idx] ?? $value,
+          "value" => $value,
+        ],
+        $tag->values,
+        array_keys($tag->values),
+      ),
+      "multiple" => in_array("multiple", $tag->options),
+      "default_value" => $this->parse_default_value($tag, $part),
+      "min" => $this->parse_min($tag),
+      "max" => $this->parse_max($tag),
+      "raw_content" => trim($part),
     ];
 
     return $element;
@@ -100,13 +114,14 @@ class FormElementParser
 
   private function get_name_from_form_part(string $part): ?string
   {
-    if (preg_match("/\[(\w+)[^\]]*\]/", $part, $matches)) {
-      return $matches[1];
+    if (preg_match("/\[([^\]]+)\]/", $part, $matches)) {
+      $parts = preg_split("/\s+/", trim($matches[1]));
+      return $parts[1] ?? null;
     }
     return null;
   }
 
-  private function extract_label(string $part): ?string
+  private function parse_label(string $part): ?string
   {
     if (preg_match("/<label[^>]*>(.*?)<\/label>/is", $part, $matches)) {
       $label = preg_replace("/\[[^\]]*\]/", "", $matches[1]);
@@ -119,141 +134,50 @@ class FormElementParser
     }
     return null;
   }
-}
 
-function parse_form_elements($form_id)
-{
-  $contact_form = WPCF7_ContactForm::get_instance($form_id);
-  if (!$contact_form) {
-    return [];
-  }
-
-  $tags = $contact_form->scan_form_tags();
-
-  error_log(
-    print_r(
-      json_encode($tags, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE),
-      true,
-    ),
-  );
-
-  $parts = preg_split(
-    "/(\[[\w*]+[^\]]*\])/",
-    $contact_form->prop("form"),
-    -1,
-    PREG_SPLIT_DELIM_CAPTURE | PREG_SPLIT_NO_EMPTY,
-  );
-
-  $elements = [];
-  $buffer = "";
-  $tag_index = 0;
-
-  foreach ($parts as $part) {
-    $part = trim($part);
-
-    if (str_starts_with($part, "[") && str_ends_with($part, "]")) {
-      if ($buffer) {
-        $clean_buf = preg_replace('/<\/(label|p|div)>\s*$/', "", $buffer);
-        $label = null;
-
-        if (preg_match('/<label[^>]*>(.*)$/is', $clean_buf, $matches)) {
-          $pre_text = trim(str_replace($matches[0], "", $clean_buf));
-          if ($pre_text) {
-            $elements[] = ["type" => "text_block", "content" => $pre_text];
+  private function parse_default_value(
+    WPCF7_FormTag $tag,
+    string $part,
+  ): ?string {
+    foreach ($tag->options as $option) {
+      if (preg_match('/^default:(.*)$/', $option, $matches)) {
+        if (in_array($tag->basetype, ["select", "checkbox", "radio"])) {
+          $idx = (int) $matches[1] - 1;
+          if (isset($tag->values[$idx])) {
+            return $tag->values[$idx];
           }
-          $label = trim(strip_tags($matches[1]));
-        } elseif ($clean_buf) {
-          $elements[] = ["type" => "text_block", "content" => $clean_buf];
         }
-        $buffer = "";
+        return $matches[1];
       }
-
-      if (isset($tags[$tag_index])) {
-        $tag = $tags[$tag_index++];
-        if (in_array($tag->type, ["hidden", "response", "submit"])) {
-          continue;
-        }
-
-        $type = rtrim($tag->type, "*");
-        $field = [
-          "type" => "field",
-          "tag_type" => $type,
-          "name" => $tag->name,
-          "label" => $label,
-          "required" => $tag->is_required(),
-          "markup_source" => $part,
-        ];
-
-        $field = array_merge($field, parse_tag_options($tag, $type, $part));
-        $elements[] = $field;
-      }
-    } else {
-      $buffer .= $part;
     }
+
+    if (preg_match('/"([^"]*)"/', $part, $matches)) {
+      return $matches[1];
+    }
+    return null;
   }
 
-  if ($buffer) {
-    $final_text = preg_replace('/<\/(label|p|div)>\s*$/', "", $buffer);
-    if ($final_text) {
-      $elements[] = ["type" => "text_block", "content" => $final_text];
-    }
-  }
-
-  return $elements;
-}
-
-function parse_tag_options($tag, $type, $markup_source)
-{
-  $field = [];
-  $options = $tag->options;
-
-  if (
-    in_array($type, [
-      "text",
-      "number",
-      "textarea",
-      "date",
-      "email",
-      "tel",
-      "url",
-      "file",
-    ])
-  ) {
-    foreach ($options as $option) {
-      if (strpos($option, "min:") === 0) {
-        $field["min"] = substr($option, 4);
-      }
-      if (strpos($option, "max:") === 0) {
-        $field["max"] = substr($option, 4);
+  private function parse_min(WPCF7_FormTag $tag): ?int
+  {
+    foreach ($tag->options as $option) {
+      if (preg_match('/^min:(\d+)$/', $option, $matches)) {
+        return (int) $matches[1];
       }
     }
 
-    if ($markup_source && preg_match('/"([^"]*)"/', $markup_source, $m)) {
-      $field["default_value"] = $m[1];
-    }
+    return null;
   }
 
-  if (in_array($type, ["select", "checkbox", "radio", "acceptance", "quiz"])) {
-    $field["options"] = $tag->values;
-    if ($type === "select" && in_array("include_blank", $options)) {
-      array_unshift($field["options"], null);
-    }
-
-    foreach ($options as $option) {
-      if (preg_match('/^default:(\d+)$/', $option, $m)) {
-        $idx = (int) $m[1] - 1;
-        if (isset($field["options"][$idx])) {
-          $field["default_value"] = $field["options"][$idx];
-        }
+  private function parse_max(WPCF7_FormTag $tag): ?int
+  {
+    foreach ($tag->options as $option) {
+      if (preg_match('/^max:(\d+)$/', $option, $matches)) {
+        return (int) $matches[1];
       }
     }
 
-    if (in_array("multiple", $options)) {
-      $field["multiple"] = true;
-    }
+    return null;
   }
-
-  return $field;
 }
 
 function get_all_forms()
@@ -300,13 +224,14 @@ function get_form_details($request)
     );
   }
 
-  $form_elements = parse_form_elements($form_id);
+  $parser = new FormElementParser($form);
+  $elements = $parser->parse();
 
   return new WP_REST_Response(
     [
       "id" => $form_id,
       "title" => $form->title(),
-      "elements" => $form_elements,
+      "elements" => $elements,
     ],
     200,
   );
