@@ -10,6 +10,64 @@
  *   - Integration with the WordPress REST API for external access
  */
 
+class FormElementParser
+{
+  private WPCF7_ContactForm $form;
+  private array $tag_Map;
+
+  function __construct(WPCF7_ContactForm $form)
+  {
+    $this->form = $form;
+    $tags = $form->scan_form_tags();
+    foreach ($tags as $tag) {
+      $this->tagMap[$tag . name] = $tag;
+    }
+  }
+
+  public function parse(): array
+  {
+    $markup = $this->form->prop("form");
+    $raw_form_parts = $this->split_form_parts($markup);
+
+    return $this->split_form_parts($markup);
+  }
+
+  private function split_form_parts(string $input): array
+  {
+    $input = preg_replace("/<!--.*?-->/s", "", $input);
+    $input = str_replace(["\r", "\n"], "", $input);
+
+    $pattern = '/
+      (<label>.*?<\/label>)
+      |(\[([a-zA-Z0-9_]+)[^\]]*\].*?\[\/\3\])
+      |(\[[a-zA-Z0-9_]+[^\]]*\])
+    /xis';
+
+    $result = [];
+    $offset = 0;
+
+    preg_match_all(
+      $pattern,
+      $input,
+      $matches,
+      PREG_OFFSET_CAPTURE | PREG_SET_ORDER,
+    );
+
+    foreach ($matches as $match) {
+      $start = $match[0][1];
+      if ($start > $offset) {
+        $result[] = substr($input, $offset, $start - $offset);
+      }
+      $result[] = $match[0][0];
+      $offset = $start + strlen($match[0][0]);
+    }
+    if ($offset < strlen($input)) {
+      $result[] = substr($input, $offset);
+    }
+    return array_values(array_filter($result, fn($v) => $v !== ""));
+  }
+}
+
 function parse_form_elements($form_id)
 {
   $contact_form = WPCF7_ContactForm::get_instance($form_id);
