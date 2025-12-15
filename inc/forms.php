@@ -172,7 +172,8 @@ function get_form_details($request)
     );
   }
 
-  if (!WPCF7_ContactForm::get_instance($form_id)) {
+  $form = WPCF7_ContactForm::get_instance($form_id);
+  if (!$form) {
     return new WP_Error(
       "form_not_found",
       "Contact Form mit dieser ID nicht gefunden.",
@@ -185,7 +186,7 @@ function get_form_details($request)
   return new WP_REST_Response(
     [
       "id" => $form_id,
-      "title" => $contact_form->title(),
+      "title" => $form->title(),
       "elements" => $form_elements,
     ],
     200,
