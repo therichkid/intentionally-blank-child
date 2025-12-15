@@ -182,7 +182,14 @@ function get_form_details($request)
 
   $form_elements = parse_form_elements($form_id);
 
-  return new WP_REST_Response($form_elements, 200);
+  return new WP_REST_Response(
+    [
+      "id" => $form_id,
+      "title" => $contact_form->title(),
+      "elements" => $form_elements,
+    ],
+    200,
+  );
 }
 
 add_action("rest_api_init", function () {
