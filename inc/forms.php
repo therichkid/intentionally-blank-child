@@ -78,6 +78,17 @@ class FormElementParser
     $name = $this->get_name_from_form_part($part);
 
     if (!$name || !isset($this->tag_map[$name])) {
+      if (preg_match("/\[submit[^\]]*\]/", $part)) {
+        preg_match('/"([^"]*)"/', $part, $matches);
+        $label = $matches[1] ?? "Senden";
+
+        return [
+          "type" => "submit",
+          "label" => $label,
+          "raw_content" => trim($part),
+        ];
+      }
+
       return [
         "type" => "text_block",
         "raw_content" => trim($part),
