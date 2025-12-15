@@ -13,14 +13,14 @@
 class FormElementParser
 {
   private WPCF7_ContactForm $form;
-  private array $tag_map;
+  private array $tag_map = [];
 
   function __construct(WPCF7_ContactForm $form)
   {
     $this->form = $form;
     $tags = $form->scan_form_tags();
     foreach ($tags as $tag) {
-      $this->tag_map[$tag . name] = $tag;
+      $this->tag_map[$tag->name] = $tag;
     }
   }
 
@@ -43,10 +43,10 @@ class FormElementParser
     $input = str_replace(["\r", "\n"], "", $input);
 
     $pattern = '/
-      (<label>.*?<\/label>)
-      |(\[([a-zA-Z0-9_]+)[^\]]*\].*?\[\/\3\])
-      |(\[[a-zA-Z0-9_]+[^\]]*\])
-    /xis';
+       (<label>.*?<\/label>)
+       |(\[([a-zA-Z0-9_]+)[^\]]*\].*?\[\/\3\])
+       |(\[[a-zA-Z0-9_]+[^\]]*\])
+     /xis';
 
     $result = [];
     $offset = 0;
@@ -84,13 +84,16 @@ class FormElementParser
       ];
     }
 
-    $tag = $this->tag_map[$name])
+    $tag = $this->tag_map[$name];
     $element = [
-        "type" => $tag->basetype,
-        "name" => $tag->name,
-        "required" =>  str_ends_with($tag->type, '*') || ($tag->basetype === 'acceptance' && !in_array('optional', $tag->options)),
-        "label" => $this->extract_label($part),
-    ]
+      "type" => $tag->basetype,
+      "name" => $tag->name,
+      "required" =>
+        str_ends_with($tag->type, "*") ||
+        ($tag->basetype === "acceptance" &&
+          !in_array("optional", $tag->options)),
+      "label" => $this->extract_label($part),
+    ];
 
     return $element;
   }
@@ -107,10 +110,11 @@ class FormElementParser
   {
     if (preg_match("/<label[^>]*>(.*?)<\/label>/is", $part, $matches)) {
       $label = preg_replace("/\[[^\]]*\]/", "", $matches[1]);
-      return trim($label);
       return trim(strip_tags($label));
     }
-    if (preg_match('/\[([a-zA-Z0-9_]+)[^\]]*\](.*?)\[\/\1\]/is', $part, $matches)) {
+    if (
+      preg_match('/\[([a-zA-Z0-9_]+)[^\]]*\](.*?)\[\/\1\]/is', $part, $matches)
+    ) {
       return trim(strip_tags($matches[2]));
     }
     return null;
@@ -125,6 +129,14 @@ function parse_form_elements($form_id)
   }
 
   $tags = $contact_form->scan_form_tags();
+
+  error_log(
+    print_r(
+      json_encode($tags, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE),
+      true,
+    ),
+  );
+
   $parts = preg_split(
     "/(\[[\w*]+[^\]]*\])/",
     $contact_form->prop("form"),
