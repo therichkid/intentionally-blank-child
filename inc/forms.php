@@ -105,14 +105,7 @@ class FormElementParser
         ($tag->basetype === "acceptance" &&
           !in_array("optional", $tag->options)),
       "label" => $this->parse_label($part),
-      "options" => array_map(
-        fn($value, $idx) => [
-          "label" => $tag->labels[$idx] ?? $value,
-          "value" => $value,
-        ],
-        $tag->values,
-        array_keys($tag->values),
-      ),
+      "options" => $this->parse_options($tag),
       "multiple" => in_array("multiple", $tag->options),
       "default_value" => $this->parse_default_value($tag, $part),
       "min" => $this->parse_min($tag),
@@ -144,6 +137,27 @@ class FormElementParser
       return trim(strip_tags($matches[2]));
     }
     return null;
+  }
+
+  private function parse_options(WPCF7_FormTag $tag): array
+  {
+    $options = array_map(
+      fn($value, $idx) => [
+        "label" => $tag->labels[$idx] ?? $value,
+        "value" => $value,
+      ],
+      $tag->values,
+      array_keys($tag->values),
+    );
+
+    if (in_array("include_blank", $tag->options)) {
+      array_unshift($options, [
+        "label" => "Bitte wählen...",
+        "value" => null,
+      ]);
+    }
+
+    return $options;
   }
 
   private function parse_default_value(
