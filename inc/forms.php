@@ -106,7 +106,11 @@ class FormElementParser
           !in_array("optional", $tag->options)),
       "label" => $this->parse_label($part),
       "options" => $this->parse_options($tag),
-      "multiple" => in_array("multiple", $tag->options),
+      "multiple" =>
+        in_array("multiple", $tag->options) ||
+        $tag->basetype === "quiz" ||
+        ($tag->basetype === "checkbox" &&
+          !in_array("exclusive", $tag->options)),
       "default_value" => $this->parse_default_value($tag, $part),
       "min" => $this->parse_min($tag),
       "max" => $this->parse_max($tag),
@@ -188,6 +192,9 @@ class FormElementParser
       if (preg_match('/^min:(\d+)$/', $option, $matches)) {
         return (int) $matches[1];
       }
+      if (preg_match('/^minlength:(\d+)$/', $option, $matches)) {
+        return (int) $matches[1];
+      }
     }
 
     return null;
@@ -197,6 +204,9 @@ class FormElementParser
   {
     foreach ($tag->options as $option) {
       if (preg_match('/^max:(\d+)$/', $option, $matches)) {
+        return (int) $matches[1];
+      }
+      if (preg_match('/^maxlength:(\d+)$/', $option, $matches)) {
         return (int) $matches[1];
       }
     }
