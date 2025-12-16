@@ -105,7 +105,7 @@ class FormElementParser
         ($tag->basetype === "acceptance" &&
           !in_array("optional", $tag->options)),
       "label" => $this->parse_label($part),
-      "options" => $this->parse_options($tag),
+      "options" => $this->parse_options($tag, $part),
       "multiple" =>
         in_array("multiple", $tag->options) ||
         $tag->basetype === "quiz" ||
@@ -135,16 +135,24 @@ class FormElementParser
       $label = preg_replace("/\[[^\]]*\]/", "", $matches[1]);
       return trim(strip_tags($label));
     }
-    if (
-      preg_match('/\[([a-zA-Z0-9_]+)[^\]]*\](.*?)\[\/\1\]/is', $part, $matches)
-    ) {
-      return trim(strip_tags($matches[2]));
-    }
     return null;
   }
 
-  private function parse_options(WPCF7_FormTag $tag): array
+  private function parse_options(WPCF7_FormTag $tag, string $part): array
   {
+    if ($tag->basetype === "acceptance") {
+      if (
+        preg_match(
+          '/\[([a-zA-Z0-9_]+)[^\]]*\](.*?)\[\/\1\]/is',
+          $part,
+          $matches,
+        )
+      ) {
+        return [["label" => trim(strip_tags($matches[2])), "value" => "1"]];
+      }
+      return [];
+    }
+
     $options = array_map(
       fn($value, $idx) => [
         "label" => $tag->labels[$idx] ?? $value,
