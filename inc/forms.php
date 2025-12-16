@@ -148,19 +148,31 @@ class FormElementParser
           $matches,
         )
       ) {
-        return [["label" => trim(strip_tags($matches[2])), "value" => "1"]];
+        return [["label" => trim(strip_tags($matches[2])), "value" => "on"]];
       }
       return [];
     }
 
-    $options = array_map(
-      fn($value, $idx) => [
-        "label" => $tag->labels[$idx] ?? $value,
+    $options = [];
+    $raw_values = $tag->raw_values ?? $tag->values;
+
+    foreach ($raw_values as $idx => $raw) {
+      if (strpos($raw, "|") !== false) {
+        [$label, $value] = explode("|", $raw, 2);
+      } else {
+        $label = $raw;
+        $value = $raw;
+      }
+
+      if ($tag->basetype === "checkbox") {
+        $value = "on";
+      }
+
+      $options[] = [
+        "label" => $label,
         "value" => $value,
-      ],
-      $tag->values,
-      array_keys($tag->values),
-    );
+      ];
+    }
 
     if (in_array("include_blank", $tag->options)) {
       array_unshift($options, [
@@ -188,7 +200,10 @@ class FormElementParser
       }
     }
 
-    if (preg_match('/"([^"]*)"/', $part, $matches)) {
+    if (
+      $tag->basetype !== "quiz" &&
+      preg_match('/"([^"]*)"/', $part, $matches)
+    ) {
       return $matches[1];
     }
     return null;
