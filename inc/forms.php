@@ -96,19 +96,23 @@ class FormElementParser
     }
 
     $tag = $this->tag_map[$name];
+    $label = $this->parse_label($part);
+    if ($tag->basetype === "quiz") {
+      $label = $this->get_first_quiz_question($tag);
+    }
 
     $element = [
       "type" => $tag->basetype,
       "name" => $tag->name,
       "required" =>
         str_ends_with($tag->type, "*") ||
+        $tag->basetype === "quiz" ||
         ($tag->basetype === "acceptance" &&
           !in_array("optional", $tag->options)),
-      "label" => $this->parse_label($part),
+      "label" => $label,
       "options" => $this->parse_options($tag, $part),
       "multiple" =>
         in_array("multiple", $tag->options) ||
-        $tag->basetype === "quiz" ||
         ($tag->basetype === "checkbox" &&
           !in_array("exclusive", $tag->options)),
       "default_value" => $this->parse_default_value($tag, $part),
@@ -140,6 +144,10 @@ class FormElementParser
 
   private function parse_options(WPCF7_FormTag $tag, string $part): array
   {
+    if ($tag->basetype === "quiz") {
+      return [];
+    }
+
     if ($tag->basetype === "acceptance") {
       if (
         preg_match(
@@ -153,16 +161,13 @@ class FormElementParser
       return [];
     }
 
-    $options = [];
-    $raw_values = $tag->raw_values ?? $tag->values;
+    if (empty($tag->values)) {
+      return [];
+    }
 
-    foreach ($raw_values as $idx => $raw) {
-      if (strpos($raw, "|") !== false) {
-        [$label, $value] = explode("|", $raw, 2);
-      } else {
-        $label = $raw;
-        $value = $raw;
-      }
+    $options = [];
+    foreach ($tag->values as $idx => $value) {
+      $label = $tag->labels[$idx] ?? $value;
 
       if ($tag->basetype === "checkbox") {
         $value = "on";
@@ -235,6 +240,15 @@ class FormElementParser
     }
 
     return null;
+  }
+
+  private function get_first_quiz_question(WPCF7_FormTag $tag): ?string
+  {
+    if ($tag->basetype !== "quiz" || empty($tag->values)) {
+      return null;
+    }
+
+    return $tag->values[0];
   }
 }
 
