@@ -148,8 +148,10 @@ add_filter("request", "sort_custom_column_entries_by_value");
 
 function set_default_admin_sort()
 {
+  global $pagenow;
   if (
     is_admin() &&
+    $pagenow === "edit.php" &&
     isset($_GET["post_type"]) &&
     $_GET["post_type"] === "events" &&
     !isset($_GET["orderby"]) &&
@@ -157,7 +159,7 @@ function set_default_admin_sort()
   ) {
     $url = add_query_arg(
       [
-        "post_type" => "events", // preserve post_type in redirect
+        "post_type" => "events",
         "orderby" => "event_datum",
         "order" => "desc",
       ],
