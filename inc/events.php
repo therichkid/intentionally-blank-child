@@ -44,8 +44,8 @@ class Custom_REST_Events_Controller extends WP_REST_Posts_Controller
       "zeit_von" => "ASC",
     ];
 
-    $from = str_replace("-", "", $request->get_param("from"));
-    $to = str_replace("-", "", $request->get_param("to"));
+    $from = str_replace("-", "", $request->get_param("from_date"));
+    $to = str_replace("-", "", $request->get_param("to_date"));
     $meta = $args["meta_query"] ?? [];
 
     if ($from) {
