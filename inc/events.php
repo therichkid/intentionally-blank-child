@@ -40,8 +40,8 @@ class Custom_REST_Events_Controller extends WP_REST_Posts_Controller
   public function modify_query($args, $request)
   {
     $args["orderby"] = [
-      "event_datum" => "ASC",
-      "zeit_von" => "ASC",
+      "date_from" => "ASC",
+      "time_from" => "ASC",
     ];
 
     $from = str_replace("-", "", $request->get_param("from_date"));
@@ -50,7 +50,7 @@ class Custom_REST_Events_Controller extends WP_REST_Posts_Controller
 
     if ($from) {
       $meta[] = [
-        "key" => "event_datum",
+        "key" => "date_from",
         "value" => $from,
         "compare" => ">=",
         "type" => "NUMERIC",
@@ -58,7 +58,7 @@ class Custom_REST_Events_Controller extends WP_REST_Posts_Controller
     }
     if ($to) {
       $meta[] = [
-        "key" => "event_datum",
+        "key" => "date_from",
         "value" => $to,
         "compare" => "<=",
         "type" => "NUMERIC",
@@ -99,7 +99,7 @@ function add_custom_columns($columns)
 {
   return array_merge(
     array_slice($columns, 0, 2),
-    ["event_datum" => __("Event-Datum"), "hauptevent" => __("Hauptevent")],
+    ["date_from" => __("Event-Datum"), "hauptevent" => __("Hauptevent")],
     array_slice($columns, 2),
   );
 }
@@ -108,8 +108,8 @@ add_filter("manage_events_posts_columns", "add_custom_columns");
 function output_custom_column_values($column, $post_id)
 {
   switch ($column) {
-    case "event_datum":
-      $date = get_post_meta($post_id, "event_datum", true);
+    case "date_from":
+      $date = get_post_meta($post_id, "date_from", true);
       echo date("d.m.Y", strtotime($date));
       break;
     case "hauptevent":
@@ -126,7 +126,7 @@ add_action(
 
 function make_custom_columns_sortable($columns)
 {
-  $columns["event_datum"] = "event_datum";
+  $columns["date_from"] = "date_from";
   return $columns;
 }
 add_filter(
@@ -136,9 +136,9 @@ add_filter(
 
 function sort_custom_column_entries_by_value($vars)
 {
-  if (isset($vars["orderby"]) && "event_datum" == $vars["orderby"]) {
+  if (isset($vars["orderby"]) && "date_from" == $vars["orderby"]) {
     $vars = array_merge($vars, [
-      "meta_key" => "event_datum",
+      "meta_key" => "date_from",
       "orderby" => "meta_value",
     ]);
   }
@@ -160,7 +160,7 @@ function set_default_admin_sort()
     $url = add_query_arg(
       [
         "post_type" => "events",
-        "orderby" => "event_datum",
+        "orderby" => "date_from",
         "order" => "desc",
       ],
       admin_url("edit.php"),
