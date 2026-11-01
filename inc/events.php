@@ -4,11 +4,9 @@
  *
  * This file provides:
  *   - REST API endpoint for fetching events within a date range
- *   - Inclusion of ACF fields in the REST API response for "events" post type
- *   - Custom admin columns for the "events" post type
- *   - Output of custom column values
- *   - Sortable columns and custom ordering by meta value
- *   - Default admin sort order for events by event date
+ *   - Optional filtering by main-event status
+ *   - Inclusion of ACF fields in REST API responses
+ *   - Custom admin columns and ordering for the "events" post type
  *
  * For more information, see: https://pluginrepublic.com/add-acf-fields-to-admin-columns/
  */
@@ -26,6 +24,13 @@ class Custom_REST_Events_Controller extends WP_REST_Posts_Controller
       "methods" => "GET",
       "callback" => [$this, "get_items"],
       "permission_callback" => "__return_true",
+      "args" => [
+        "is_main_event" => [
+          "type" => "boolean",
+          "required" => false,
+          "description" => "Filter by main-event status.",
+        ],
+      ],
     ]);
   }
 
@@ -39,14 +44,38 @@ class Custom_REST_Events_Controller extends WP_REST_Posts_Controller
 
   public function modify_query($args, $request)
   {
-    $args["orderby"] = [
-      "date_from" => "ASC",
-      "time_from" => "ASC",
-    ];
+    $from = str_replace("-", "", (string) $request->get_param("date_from"));
+    $to = str_replace("-", "", (string) $request->get_param("date_to"));
+    $is_main_event = $request->get_param("is_main_event");
 
-    $from = str_replace("-", "", $request->get_param("from_date"));
-    $to = str_replace("-", "", $request->get_param("to_date"));
-    $meta = $args["meta_query"] ?? [];
+    $meta = ["relation" => "AND"];
+    if (!empty($args["meta_query"])) {
+      $meta[] = $args["meta_query"];
+    }
+    $meta[] = [
+      "relation" => "OR",
+      "event_sort_date" => [
+        "key" => "date_from",
+        "compare" => "EXISTS",
+        "type" => "NUMERIC",
+      ],
+      [
+        "key" => "date_from",
+        "compare" => "NOT EXISTS",
+      ],
+    ];
+    $meta[] = [
+      "relation" => "OR",
+      "event_sort_time" => [
+        "key" => "time_from",
+        "compare" => "EXISTS",
+        "type" => "CHAR",
+      ],
+      [
+        "key" => "time_from",
+        "compare" => "NOT EXISTS",
+      ],
+    ];
 
     if ($from) {
       $meta[] = [
@@ -64,11 +93,19 @@ class Custom_REST_Events_Controller extends WP_REST_Posts_Controller
         "type" => "NUMERIC",
       ];
     }
-
-    if ($from || $to) {
-      $meta["relation"] = "AND";
-      $args["meta_query"] = $meta;
+    if ($is_main_event !== null) {
+      $meta[] = [
+        "key" => "is_main_event",
+        "value" => $is_main_event ? "1" : "0",
+        "compare" => "=",
+      ];
     }
+
+    $args["meta_query"] = $meta;
+    $args["orderby"] = [
+      "event_sort_date" => "ASC",
+      "event_sort_time" => "ASC",
+    ];
 
     return $args;
   }
@@ -99,7 +136,7 @@ function add_custom_columns($columns)
 {
   return array_merge(
     array_slice($columns, 0, 2),
-    ["date_from" => __("Event-Datum"), "hauptevent" => __("Hauptevent")],
+    ["date_from" => __("Datum (von)"), "is_main_event" => __("Hauptevent")],
     array_slice($columns, 2),
   );
 }
@@ -112,8 +149,8 @@ function output_custom_column_values($column, $post_id)
       $date = get_post_meta($post_id, "date_from", true);
       echo date("d.m.Y", strtotime($date));
       break;
-    case "hauptevent":
-      echo get_post_meta($post_id, "hauptevent", true) ? "Ja" : "Nein";
+    case "is_main_event":
+      echo get_post_meta($post_id, "is_main_event", true) ? "Ja" : "Nein";
       break;
   }
 }
